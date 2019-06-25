@@ -1,0 +1,220 @@
+
+
+	bmp_diag:
+			# imgptr is in %rdi
+			# width  is in %rsi
+			# height is in %rdx
+			# gap 	 is in %rcx
+			# can use %rax, %rbx, %rbp, %r8 to %r14
+			#
+			#	make
+			#	./ssim -v 2 bmptest.yo
+			#	make test
+			#
+			#-----------------------------------------------------------------
+
+			# FILL HERE
+			# You are allowed to use any register supported by Y86-64 architecture
+
+			#######################################################################################################
+			###	%rdi	<-	current height first imgptr , each loop mark (HEIGHT)%GAP + GAP * 1REPSIZE * i				###
+			###	%rbx	<-	current height first imgptr , each loop mark GAP-(HEIGHT)%GAP + GAP * 1REPSIZE * i		###
+			###	%rsi	<-	(width - 1) * 3 = WIDTH																																###
+			###	%rdx	<-	ONE LOOP SIZE(GAP)																																		###
+			###	%rcx	<-	gap * 3 = GAP																																					###
+			###	%r8		<-	initialized => (HEIGHT)%GAP, each WIDTHLoop -3, if r8<0 then += GAP										###
+			###	%r9		<-	initialized => GAP-(HEIGHT)%GAP, each WIDTHLoop +3, if r8<0 then -= GAP								###
+			###	%r10	<-	$0x00																																									###
+			###	%r11	<-	$0xff																																									###
+			###	%r12	<-	{ rax*1REP*gap - GAP, (WIDTH%GAP) } use stack																					###
+			### %r13	<-	1REPSIZE * gap, for HEIGHTLoop																												###
+			### %r14	<-	WIDTH + Pad = 1REPSIZE																																###
+			###	%rax	<-	for HEIGHTLOOP cmp, initial value is height/gap + 1, if r8<0 then height/gap					###
+			#######################################################################################################
+			#### in stack #########################################################################################
+			#######(%rsp)#####			befor mark loop start, initial %rdi value																	#####
+			######8(%rsp)#####			WIDTH%GAP																																	#####
+			#####16(%rsp)#####			WIDTH																																			#####
+			#####24(%rsp)#####			((height/gap)+1)*1REP*gap - GAP // ((height/gap))*1REP*gap - GAP					#####
+			#####32(%rsp)#####			height/gap + 1 // height/gap																							#####
+			#######################################################################################################
+
+
+			irmovq	$3, %r10
+			rrmovq	%rsi, %r14
+			iaddq		$-1, %rdx				# height -= 1
+			andq		%r10, %r14
+			mulq		%r10, %rsi
+			mulq		%r10, %rdx
+			addq		%rsi, %r14			# 1rep size
+			rrmovq	%r14, %r13
+			mulq		%rcx, %r13
+			mulq		%r10, %rcx
+
+	#-------------------------------------------------------------------------------------------#
+			iaddq		$-3, %rsi
+
+
+			rrmovq	%rsi, %r10		#	r12
+			rrmovq	%rdx, %rax
+			rrmovq	%rcx, %r9
+			pushq		%rsi					#	r12
+			divq		%rcx, %r10		#	r12
+			divq		%rcx, %rax		# 여기서 rax가 height / gap
+			mulq		%rcx, %r10		# r12
+			rrmovq	%rax, %r11
+			subq		%r10, %rsi		#	r12
+			iaddq		$-4, %r11
+			rrmovq	%rsi, %r12		#	r12 WIDTH % GAP
+			popq		%rsi
+			pushq		%r11					# (height / gap) + 1{꼬랑지} - 5{Loop unrolling}
+			subq		%rcx, %rsi
+			iaddq		$5, %r11
+
+			mulq		%r13, %r11
+			subq		%rcx, %r11
+			pushq		%r11					#	((height / gap) + 1{꼬랑지})) * 1REP * GAP - GAP
+			mulq		%rcx, %rax
+			irmovq	$0, %r10				# 00
+			irmovq	$-1, %r11				# ff
+			subq		%rax, %rdx		# 여기서 rdx가 나머지
+			pushq		%rsi
+			pushq		%r12
+			rrmovq	%rdx, %r8			# r8 = (HEIGHT - 3) % GAP
+			pushq		%rdi
+			rrmovq	%rcx, %rdx
+			subq		%r8, %r9			# r9 = GAP - (HEIGHT - 3) % GAP
+
+
+
+		LOOPSTART:
+			rrmovq	%rdi, %rbx
+			mrmovq	16(%rsp), %rsi
+			mrmovq	24(%rsp), %r12
+			addq		%r8, %rdi
+			addq		%r9, %rbx
+		MARKLOOPINIT:
+			mrmovq	32(%rsp), %rax
+		MARKLOOPUNROLLED:
+			rmmovb	%r10, (%rdi)
+			rmmovb	%r10, 1(%rdi)
+			rmmovb	%r11,	2(%rdi)
+			addq		%r13, %rdi
+			rmmovb	%r10, (%rbx)
+			rmmovb	%r10, 1(%rbx)
+			rmmovb	%r11,	2(%rbx)
+			addq		%r13, %rbx
+			rmmovb	%r10, (%rdi)
+			rmmovb	%r10, 1(%rdi)
+			rmmovb	%r11,	2(%rdi)
+			addq		%r13, %rdi
+			rmmovb	%r10, (%rbx)
+			rmmovb	%r10, 1(%rbx)
+			rmmovb	%r11,	2(%rbx)
+			addq		%r13, %rbx
+			rmmovb	%r10, (%rdi)
+			rmmovb	%r10, 1(%rdi)
+			rmmovb	%r11,	2(%rdi)
+			addq		%r13, %rdi
+			rmmovb	%r10, (%rbx)
+			rmmovb	%r10, 1(%rbx)
+			rmmovb	%r11,	2(%rbx)
+			addq		%r13, %rbx
+			rmmovb	%r10, (%rdi)
+			rmmovb	%r10, 1(%rdi)
+			rmmovb	%r11,	2(%rdi)
+			addq		%r13, %rdi
+			rmmovb	%r10, (%rbx)
+			rmmovb	%r10, 1(%rbx)
+			rmmovb	%r11,	2(%rbx)
+			addq		%r13, %rbx
+			rmmovb	%r10, (%rdi)
+			rmmovb	%r10, 1(%rdi)
+			rmmovb	%r11,	2(%rdi)
+			addq		%r13, %rdi
+			rmmovb	%r10, (%rbx)
+			rmmovb	%r10, 1(%rbx)
+			rmmovb	%r11,	2(%rbx)
+			addq		%r13, %rbx
+			iaddq		$-5, %rax
+			jge	MARKLOOPUNROLLED
+			iaddq		$4, %rax
+			jge	MARKLOOPROLLED
+			jmp	MOVERIGHT
+		MARKLOOPROLLED:
+			rmmovb	%r10, (%rdi)
+			rmmovb	%r10, 1(%rdi)
+			rmmovb	%r11,	2(%rdi)
+			addq		%r13, %rdi
+			rmmovb	%r10, (%rbx)
+			rmmovb	%r10, 1(%rbx)
+			rmmovb	%r11,	2(%rbx)
+			addq		%r13, %rbx
+			addq		%r11, %rax
+			jge	MARKLOOPROLLED
+		MOVERIGHT:
+			subq		%r12, %rdi
+			subq		%r12, %rbx
+			subq		%rcx, %rsi
+			jge	MARKLOOPINIT
+			mrmovq	8(%rsp), %r12
+			addq		%rcx, %rsi
+			mrmovq	32(%rsp), %rax
+#			nop			# 여기 data dependence
+			subq		%r8, %r12
+			jl	RIGHTENDIF2
+			iaddq		$5, %rax
+			subq		%r9, %rsi
+			jge	RIGHTENDMARKLOOP2:
+		RIGHTENDMARKLOOP1:
+			rmmovb	%r10, (%rdi)
+			rmmovb	%r10, 1(%rdi)
+			rmmovb	%r11,	2(%rdi)
+			addq		%r13, %rdi
+			addq		%r11, %rax
+			jg	RIGHTENDMARKLOOP1
+			popq		%rdi
+			jmp NEXTLINEINIT
+		RIGHTENDMARKLOOP2:
+			rmmovb	%r10, (%rdi)
+			rmmovb	%r10, 1(%rdi)
+			rmmovb	%r11,	2(%rdi)
+			addq		%r13, %rdi
+			rmmovb	%r10, (%rbx)
+			rmmovb	%r10, 1(%rbx)
+			rmmovb	%r11,	2(%rbx)
+			addq		%r13, %rbx
+			addq		%r11, %rax
+			jg	RIGHTENDMARKLOOP2
+			popq		%rdi
+			jmp	NEXTLINEINIT
+		RIGHTENDIF2:
+			popq		%rdi
+			subq		%r9, %rsi
+			jl	NEXTLINEINIT
+			iaddq		$5, %rax
+		RIGHTENDMARKLOOP3:
+			rmmovb	%r10, (%rbx)
+			rmmovb	%r10, 1(%rbx)
+			rmmovb	%r11,	2(%rbx)
+			addq		%r13, %rbx
+			addq		%r11, %rax
+			jg RIGHTENDMARKLOOP3
+		NEXTLINEINIT:
+			iaddq		$3,	%r9
+			addq		%r14, %rdi
+			iaddq		$-3, %r8
+			jge NEXTLINECHECK
+			mrmovq	24(%rsp), %rax
+			mrmovq	16(%rsp), %rbx
+			subq		%rcx, %r9
+			addq		%r11, %rax
+			subq		%r13, %rbx
+			addq		%rcx, %r8
+			rmmovq	%rax, 24(%rsp)
+			rmmovq	%rbx, 16(%rsp)
+		NEXTLINECHECK:
+			iaddq		$-3, %rdx
+			pushq		%rdi
+			jg LOOPSTART
+		ret
