@@ -1,4 +1,4 @@
-# 4190.308-001 Computer Architecture(Spring 2019), Prof.Jinsoo Kim
+## 4190.308-001 Computer Architecture(Spring 2019, Prof.Jin-soo Kim)
 pa1 - 100  
 pa2 - 100  
 pa3 - 110  (additional 10%)  
